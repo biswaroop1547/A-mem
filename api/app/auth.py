@@ -17,16 +17,35 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_DAYS = 365
 
 # Password hashing
+# NOTE: bcrypt truncates passwords at 72 bytes. To avoid 500s on long passwords
+# (or when someone accidentally passes an API key), we enforce a max length.
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+_MAX_PASSWORD_BYTES = 72
+
+def _enforce_bcrypt_password_limit(pw: str) -> str:
+    # bcrypt limit is in bytes, not characters
+    if pw is None:
+        return pw
+    b = pw.encode("utf-8")
+    if len(b) > _MAX_PASSWORD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Password too long for bcrypt (max {_MAX_PASSWORD_BYTES} bytes).",
+        )
+    return pw
+
 security = HTTPBearer(auto_error=False)
 
 class AuthService:
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:
+        plain_password = _enforce_bcrypt_password_limit(plain_password)
         return pwd_context.verify(plain_password, hashed_password)
     
     @staticmethod
     def get_password_hash(password: str) -> str:
+        password = _enforce_bcrypt_password_limit(password)
         return pwd_context.hash(password)
     
     @staticmethod
