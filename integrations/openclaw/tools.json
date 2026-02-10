@@ -1,0 +1,154 @@
+{
+  "name": "cortex-memory",
+  "version": "1.0.0",
+  "description": "Advanced memory tools powered by Prem Cortex",
+  "author": "OpenClaw + Prem AI",
+  "license": "MIT",
+  "repository": "https://github.com/prem-research/cortex",
+  "requirements": {
+    "python": ">=3.11",
+    "packages": ["cortex", "chromadb"],
+    "services": {
+      "chromadb": {
+        "host": "${CORTEX_CHROMA_HOST:-localhost}",
+        "port": "${CORTEX_CHROMA_PORT:-8000}"
+      }
+    },
+    "env": ["OPENAI_API_KEY"]
+  },
+  "tools": [
+    {
+      "name": "cortex_remember",
+      "description": "Store a memory with automatic semantic analysis, keyword extraction, and relationship linking. Use when user expresses preferences, makes decisions, completes tasks, or explicitly asks to remember something.",
+      "function": "integrations.openclaw.adapter:cortex_remember",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "The memory content to store"
+          },
+          "context": {
+            "type": "string",
+            "description": "Domain context for organization (e.g., 'work.programming', 'personal.health', 'project.api')"
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Searchable tags for the memory"
+          }
+        },
+        "required": ["content"]
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "memory_id": { "type": "string" },
+          "error": { "type": "string" }
+        }
+      }
+    },
+    {
+      "name": "cortex_recall",
+      "description": "Search memories with semantic understanding and temporal awareness. Supports natural date ranges ('yesterday', 'last week') and recency weighting. Use for retrieving past conversations, preferences, decisions, or any stored information.",
+      "function": "integrations.openclaw.adapter:cortex_recall",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Search query (semantic search)"
+          },
+          "temporal_weight": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "default": 0.0,
+            "description": "Balance between semantic relevance (0.0) and recency (1.0). Use 0.5+ for time-sensitive queries."
+          },
+          "date_range": {
+            "type": "string",
+            "description": "Filter by date: 'yesterday', 'last week', 'last month', '2024-01', or RFC3339 timestamp"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "default": 10,
+            "description": "Maximum number of results"
+          }
+        },
+        "required": ["query"]
+      },
+      "returns": {
+        "type": "object",
+        "properties": {
+          "success": { "type": "boolean" },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "content": { "type": "string" },
+                "score": { "type": "number" },
+                "recency_score": { "type": "number" },
+                "context": { "type": "string" },
+                "tags": { "type": "array" },
+                "time": { "type": "string" },
+                "id": { "type": "string" }
+              }
+            }
+          },
+          "count": { "type": "integer" },
+          "error": { "type": "string" }
+        }
+      }
+    }
+  ],
+  "hooks": {
+    "on_conversation_turn": {
+      "description": "Auto-store significant conversation exchanges",
+      "function": "integrations.openclaw.adapter:on_conversation_turn",
+      "enabled": true,
+      "config": {
+        "auto_detect_significance": true,
+        "min_message_length": 50
+      }
+    },
+    "on_session_start": {
+      "description": "Initialize Cortex adapter for the session",
+      "function": "integrations.openclaw.adapter:init_cortex_adapter"
+    }
+  },
+  "config_schema": {
+    "type": "object",
+    "properties": {
+      "stm_capacity": {
+        "type": "integer",
+        "default": 100,
+        "description": "Short-term memory capacity"
+      },
+      "enable_smart_collections": {
+        "type": "boolean",
+        "default": true,
+        "description": "Enable domain-aware memory organization"
+      },
+      "enable_background_processing": {
+        "type": "boolean",
+        "default": true,
+        "description": "Enable async LTM processing"
+      },
+      "auto_store_conversations": {
+        "type": "boolean",
+        "default": true,
+        "description": "Automatically store significant conversations"
+      },
+      "embedding_model": {
+        "type": "string",
+        "default": "text-embedding-3-small",
+        "description": "Embedding model for semantic search"
+      }
+    }
+  }
+}
