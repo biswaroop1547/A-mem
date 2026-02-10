@@ -20,11 +20,20 @@ class CortexService:
     def _initialize_cortex(self):
         load_dotenv()
         
-        api_key = os.getenv("OPENAI_API_KEY")
+        # OpenAI-compatible key. Prefer OPENAI_API_KEY; fall back to OPENROUTER_API_KEY.
+        api_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENROUTER_API_KEY")
         chroma_uri = os.getenv("CHROMA_URI", "http://localhost:7003")
+
+        # Optional OpenAI-compatible base URL override.
+        # For OpenRouter: https://openrouter.ai/api/v1
+        openai_base_url = os.getenv("OPENAI_BASE_URL")
+        if not openai_base_url and os.getenv("OPENROUTER_API_KEY") and not os.getenv("OPENAI_API_KEY"):
+            openai_base_url = "https://openrouter.ai/api/v1"
+        if openai_base_url:
+            os.environ["OPENAI_BASE_URL"] = openai_base_url
         
         if not api_key:
-            raise ValueError("OPENAI_API_KEY not found in environment variables")
+            raise ValueError("OPENAI_API_KEY or OPENROUTER_API_KEY not found in environment variables")
         
         try:
             self._memory_system = AgenticMemorySystem(

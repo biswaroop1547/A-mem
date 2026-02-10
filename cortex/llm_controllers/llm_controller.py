@@ -12,14 +12,36 @@ class BaseLLMController(ABC):
 
 class OpenAIController(BaseLLMController):
     def __init__(self, model: str = "gpt-4", api_key: Optional[str] = None):
+        """OpenAI-compatible chat controller.
+
+        Supports both:
+        - OpenAI direct (OPENAI_API_KEY)
+        - OpenRouter OpenAI-compatible proxy (OPENROUTER_API_KEY) via base_url
+
+        Env vars:
+        - OPENAI_API_KEY (preferred)
+        - OPENROUTER_API_KEY (fallback)
+        - OPENAI_BASE_URL (optional override)
+        """
         try:
             from openai import OpenAI
             self.model = model
+
             if api_key is None:
-                api_key = os.getenv('OPENAI_API_KEY')
+                api_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENROUTER_API_KEY")
             if api_key is None:
-                raise ValueError("OpenAI API key not found. Set OPENAI_API_KEY environment variable.")
-            self.client = OpenAI(api_key=api_key)
+                raise ValueError(
+                    "OpenAI-compatible API key not found. Set OPENAI_API_KEY or OPENROUTER_API_KEY."
+                )
+
+            base_url = os.getenv("OPENAI_BASE_URL")
+            if not base_url and os.getenv("OPENROUTER_API_KEY") and not os.getenv("OPENAI_API_KEY"):
+                base_url = "https://openrouter.ai/api/v1"
+
+            if base_url:
+                self.client = OpenAI(api_key=api_key, base_url=base_url)
+            else:
+                self.client = OpenAI(api_key=api_key)
         except ImportError:
             raise ImportError("OpenAI package not found. Install it with: pip install openai")
     

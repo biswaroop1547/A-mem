@@ -34,7 +34,7 @@ class AgenticMemorySystem:
                  enable_background_processing: bool = True,
                  chroma_uri: str = DEFAULT_CHROMA_URI):  
         if api_key is None:
-            api_key = os.getenv("OPENAI_API_KEY")
+            api_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENROUTER_API_KEY")
         self.enable_smart_collections = enable_smart_collections
         self.memories = {}
         

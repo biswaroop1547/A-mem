@@ -49,16 +49,41 @@ class EmbeddingManager:
             self._init_openai()
 
     def _init_openai(self):
-        """Initialize OpenAI backend"""
+        """Initialize OpenAI-compatible embeddings backend.
+
+        Supports both:
+        - OpenAI direct (OPENAI_API_KEY)
+        - OpenRouter OpenAI-compatible proxy (OPENROUTER_API_KEY) via base_url
+
+        Environment variables:
+        - OPENAI_API_KEY (preferred if set)
+        - OPENROUTER_API_KEY (fallback)
+        - OPENAI_BASE_URL (optional override)
+        """
         try:
             from openai import OpenAI
-            api_key = os.getenv("OPENAI_API_KEY")
+
+            # Prefer a real OpenAI key if present; otherwise fall back to OpenRouter.
+            api_key = os.getenv("OPENAI_API_KEY") or os.getenv("OPENROUTER_API_KEY")
             if not api_key:
-                raise ValueError("OPENAI_API_KEY environment variable is required for OpenAI embeddings")
-            self.client = OpenAI(api_key=api_key)
-            logger.info(f"Created EmbeddingManager for OpenAI model: {self.model_name}")
+                raise ValueError(
+                    "Missing API key: set OPENAI_API_KEY or OPENROUTER_API_KEY for embeddings"
+                )
+
+            base_url = os.getenv("OPENAI_BASE_URL")
+            if not base_url and os.getenv("OPENROUTER_API_KEY") and not os.getenv("OPENAI_API_KEY"):
+                base_url = "https://openrouter.ai/api/v1"
+
+            if base_url:
+                self.client = OpenAI(api_key=api_key, base_url=base_url)
+            else:
+                self.client = OpenAI(api_key=api_key)
+
+            logger.info(
+                f"Created EmbeddingManager for model: {self.model_name} (base_url={base_url or 'default'})"
+            )
         except Exception as e:
-            logger.error(f"Failed to initialize OpenAI backend: {e}")
+            logger.error(f"Failed to initialize embeddings backend: {e}")
             raise
 
     def _init_local(self):

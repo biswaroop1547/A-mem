@@ -11,7 +11,12 @@ class Settings:
     JWT_EXPIRE_DAYS: int = 365
     
     # Cortex
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    # OpenAI-compatible key. Prefer OPENAI_API_KEY; fall back to OPENROUTER_API_KEY.
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", os.getenv("OPENROUTER_API_KEY", ""))
+
+    # Optional OpenAI-compatible base URL override.
+    # If using OpenRouter, set OPENAI_BASE_URL=https://openrouter.ai/api/v1 (or let code default it).
+    OPENAI_BASE_URL: str = os.getenv("OPENAI_BASE_URL", "")
     CHROMA_URI: str = os.getenv("CHROMA_URI", "http://localhost:7003")
     
     # API
